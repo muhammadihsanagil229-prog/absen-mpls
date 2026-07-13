@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Absensi Otomatis MPLS 2026</title>
-    <!-- Memanggil Library QR Code Scanner -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body {
@@ -29,61 +28,14 @@
             width: 100%;
             max-width: 450px;
         }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-            color: #1b4d3e;
-        }
-        h3 {
-            font-size: 16px;
-            font-weight: normal;
-            margin-top: 0;
-            margin-bottom: 25px;
-            color: #4a7c6c;
-        }
-        /* Style untuk kotak scanner */
-        #reader {
-            width: 100%;
-            border: 2px solid #1b4d3e !important;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #000;
-        }
-        /* Merapikan tombol dan pilihan kamera bawaan library */
-        #reader button {
-            background-color: #1b4d3e;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin: 10px 0;
-            transition: 0.3s;
-        }
-        #reader button:hover {
-            background-color: #2c6b57;
-        }
-        #reader select {
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-            width: 80%;
-        }
-        #result {
-            margin-top: 20px;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-        }
-        .success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
+        h1 { font-size: 24px; margin-bottom: 5px; color: #1b4d3e; }
+        h3 { font-size: 16px; font-weight: normal; margin-top: 0; margin-bottom: 25px; color: #4a7c6c; }
+        #reader { width: 100%; border: 2px solid #1b4d3e !important; border-radius: 12px; overflow: hidden; background: #000; }
+        #reader button { background-color: #1b4d3e; color: white; border: none; padding: 10px 20px; font-size: 14px; border-radius: 8px; cursor: pointer; margin: 10px 0; }
+        #reader select { padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px; width: 80%; }
+        #result { margin-top: 20px; font-size: 16px; font-weight: bold; padding: 15px; border-radius: 8px; display: none; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .btn-link { margin-top: 15px; display: inline-block; color: #1b4d3e; font-weight: bold; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -92,63 +44,46 @@
         <h1>Selamat Datang di SMK BM Al Ikhlas</h1>
         <h3>Sistem Absensi Otomatis MPLS 2026</h3>
         
-        <!-- Kotak Kamera Tempat Scan -->
         <div id="reader"></div>
-        
-        <!-- Kotak Notifikasi Hasil Scan -->
         <div id="result"></div>
+
+        <a href="dashboard.html" class="btn-link">➡️ Buka Dashboard Rekapitulasi</a>
     </div>
 
     <script>
         function onScanSuccess(decodedText, decodedResult) {
-            // Suara bip singkat saat berhasil scan (opsional)
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
             audio.play();
 
             const resultDiv = document.getElementById('result');
             resultDiv.className = "result success";
             resultDiv.style.display = "block";
-            resultDiv.innerHTML = `✅ Absen Berhasil!<br>Data: ${decodedText}`;
+            resultDiv.innerHTML = `✅ Absen Berhasil!<br>Siswa: ${decodedText}`;
 
-            // Kirim data absensi ke sistem/console kamu di sini
-            console.log(`Scan result: ${decodedText}`, decodedResult);
+            // --- PROSES TERTAUT KE DASHBOARD (LocalStorage) ---
+            // Ambil data yang sudah ada di memori browser atau buat array kosong jika belum ada
+            let dataAbsen = JSON.parse(localStorage.getItem("listHadir")) || [];
             
-            // Sembunyikan notifikasi setelah 3 detik
-            setTimeout(() => {
-                resultDiv.style.display = "none";
-            }, 3000);
-        }
-
-        function onScanFailure(error) {
-            // Dikosongkan agar tidak memenuhi log saat kamera mencari QR
-        }
-
-        // Konfigurasi Scanner
-        let html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                rememberLastUsedCamera: true,
-                // Mengatur prioritas utama ke kamera belakang (environment)
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            // Masukkan nama siswa dan waktu absen sekarang ke memori jika belum pernah absen
+            let waktuSekarang = new Date().toLocaleTimeString('id-ID') + " WIB";
+            
+            // Cek apakah siswa ini sudah di-scan sebelumnya agar tidak ganda
+            let sudahAda = dataAbsen.find(item => item.nama === decodedText);
+            if (!sudahAda) {
+                dataAbsen.push({ nama: decodedText, waktu: waktuSekarang });
+                localStorage.setItem("listHadir", JSON.stringify(dataAbsen));
             }
+            // --------------------------------------------------
+
+            setTimeout(() => { resultDiv.style.display = "none"; }, 3000);
+        }
+
+        function onScanFailure(error) {}
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] }
         );
-
-        // Menjalankan Scanner
         html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-
-        // Tambahan otomatis untuk performa browser HP agar tidak memblokir video
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                const videoElement = document.querySelector('#reader video');
-                if (videoElement) {
-                    videoElement.setAttribute('playsinline', 'true');
-                    videoElement.setAttribute('muted', 'true');
-                    videoElement.play().catch(err => console.log("Auto-play blocked atau kamera belum aktif"));
-                }
-            }, 2000);
-        });
     </script>
 </body>
 </html>
