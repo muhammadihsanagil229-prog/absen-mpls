@@ -24,7 +24,7 @@
         .stat-number { font-size: 32px; font-weight: bold; margin-top: 5px; }
         .main-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
-        .export-buttons button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; }
+        .export-buttons button { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; margin-right: 5px; }
         .btn-excel { background-color: #1f7246; } .btn-pdf { background-color: #d9383a; } .btn-print { background-color: #007bff; }
         .controls { display: flex; gap: 15px; flex: 1; justify-content: flex-end; min-width: 300px; }
         .search-box { position: relative; flex: 1; }
@@ -41,8 +41,8 @@
         .bg-belum { background: #f8d7da; color: #721c24; }
         .bg-izin { background: #fff3cd; color: #856404; }
         .btn-action { border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; color: white; }
-        .btn-edit { background-color: #ffc107; color: #333; } .btn-delete { background-color: #dc3545; }
-        .btn-reset { background-color: #6c757d; margin-top: 10px; }
+        .btn-edit { background-color: #ffc107; color: #333; }
+        .btn-reset { background-color: #6c757d; }
     </style>
 </head>
 <body>
@@ -50,7 +50,7 @@
     <div class="container">
         <div class="welcome-header animate__animated animate__fadeInDown">
             <h1><i class="fa-solid fa-graduation-cap"></i> Dashboard Utama Rekapitulasi MPLS</h1>
-            <p>Data Terhubung Otomatis dari Hasil Scan QR Code</p>
+            <p>Data Terhubung Otomatis dari Hasil Scan QR Code Siswa SMK BM Al Ikhlas</p>
         </div>
 
         <div class="stats-grid animate__animated animate__fadeIn">
@@ -77,13 +77,13 @@
                     <button class="btn-excel" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
                     <button class="btn-pdf" onclick="exportToPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                     <button class="btn-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-                    <button class="btn-action btn-reset" onclick="resetAbsensi()"><i class="fa-solid fa-rotate-left"></i> Kosongkan Absen</button>
+                    <button class="btn-action btn-reset" onclick="resetAbsensi()"><i class="fa-solid fa-rotate-left"></i> Reset Absen</button>
                 </div>
                 
                 <div class="controls">
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Cari nama siswa...">
+                        <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Cari nama atau jurusan...">
                     </div>
                     <div class="filter-buttons">
                         <button class="active" onclick="filterStatus('Semua', this)">Semua</button>
@@ -99,8 +99,8 @@
                     <thead>
                         <tr>
                             <th>No</th>
-                            <th>Nama Siswa</th>
-                            <th>Gugus / Kelompok</th>
+                            <th>Nama Siswa Baru</th>
+                            <th>Jurusan Terpilih</th>
                             <th>Waktu Absen</th>
                             <th>Status</th>
                             <th>Keterangan</th>
@@ -108,10 +108,6 @@
                         </tr>
                     </thead>
                     <tbody id="siswaTableBody">
-                        <tr data-nama="Ahmad Rizky" data-status="Belum Absen">
-                            <td>1</td><td class="nama-siswa">Ahmad Rizky</td><td>Gugus 1 - Garuda</td><td class="waktu-siswa">-</td><td><span class="badge bg-belum">Belum Absen</span></td><td class="ket-siswa">Belum Tap QR</td>
-                            <td class="no-print"><button class="btn-action btn-edit" onclick="editRow(this)"><i class="fa-solid fa-pen"></i></button></td>
-                        </tr>
                         <tr data-nama="MUHAMAD.RIZKI RAMADHAN" data-status="Belum Absen">
     <td>1</td><td class="nama-siswa">MUHAMAD.RIZKI RAMADHAN</td><td>BISNIS DIGITAL</td><td class="waktu-siswa">-</td><td><span class="badge bg-belum">Belum Absen</span></td><td class="ket-siswa">Belum Tap QR</td>
     <td class="no-print"><button class="btn-action btn-edit" onclick="editRow(this)"><i class="fa-solid fa-pen"></i></button></td>
@@ -1336,7 +1332,6 @@
     <td>306</td><td class="nama-siswa">SEPTIAN AHMAD AWALUDIN</td><td>TEKNIK KOMPUTER DAN JARINGAN</td><td class="waktu-siswa">-</td><td><span class="badge bg-belum">Belum Absen</span></td><td class="ket-siswa">Belum Tap QR</td>
     <td class="no-print"><button class="btn-action btn-edit" onclick="editRow(this)"><i class="fa-solid fa-pen"></i></button></td>
 </tr>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -1344,18 +1339,14 @@
     </div>
 
     <script>
-        // FUNGSI MEMBACA MEMORI SCAN DAN MERUBAH TABEL UTAMA
         function loadScanData() {
             let dataAbsen = JSON.parse(localStorage.getItem("listHadir")) || [];
             let rows = document.getElementById("siswaTableBody").getElementsByTagName("tr");
 
             for (let i = 0; i < rows.length; i++) {
                 let namaSiswa = rows[i].getAttribute("data-nama");
-                
-                // Cari apakah nama siswa di baris ini ada di dalam memori hasil scan QR
                 let cocok = dataAbsen.find(item => item.nama.trim().toLowerCase() === namaSiswa.trim().toLowerCase());
                 
-                // Jika statusnya bukan "Izin" buatan manual panitia, ubah jadi hadir otomatis
                 if (cocok && rows[i].getAttribute("data-status") !== "Izin") {
                     rows[i].setAttribute("data-status", "Hadir");
                     rows[i].querySelector(".waktu-siswa").innerText = cocok.waktu;
@@ -1380,7 +1371,6 @@
             document.getElementById("count-izin").innerText = izin;
         }
 
-        // Jalankan pembacaan data otomatis setiap 2 detik sekali agar real-time!
         setInterval(loadScanData, 2000);
         loadScanData();
 
