@@ -3,78 +3,435 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generator QR Code MPLS</title>
+    <title>Generator QR Code MPLS - SMK BM Al Ikhlas</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Library Pembuat QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body class="bg-emerald-50 min-h-screen flex items-center justify-center p-4">
 
     <div class="bg-white p-6 rounded-2xl shadow-lg border border-emerald-100 max-w-md w-full">
-        <h2 class="text-xl font-bold text-emerald-800 mb-4 text-center">Buat QR Code Peserta MPLS</h2>
+        <h2 class="text-xl font-bold text-emerald-800 mb-2 text-center">Cetak QR Code Peserta MPLS</h2>
+        <p class="text-xs text-center text-emerald-600 mb-4">SMK BM Al Ikhlas - Database Terintegrasi</p>
         
-        <div class="space-y-3">
-            <div>
-                <label class="text-xs font-semibold text-emerald-700 block mb-1">Nama Siswa</label>
-                <input type="text" id="nama" placeholder="Contoh: Ahmad Fauzi" class="w-full border border-emerald-200 rounded-lg p-2 focus:outline-emerald-500">
+        <div class="space-y-4">
+            <!-- Kolom Cari Nama -->
+            <div class="relative">
+                <label class="text-xs font-semibold text-emerald-700 block mb-1">Cari Nama Siswa Baru</label>
+                <input type="text" id="search-input" oninput="filterSiswa()" placeholder="Ketik nama siswa di sini..." class="w-full border border-emerald-200 rounded-lg p-2.5 focus:outline-emerald-500 font-medium">
+                
+                <!-- Dropdown Hasil Pencarian -->
+                <div id="autocomplete-list" class="absolute z-10 left-0 right-0 bg-white border border-emerald-100 rounded-lg max-h-48 overflow-y-auto mt-1 shadow-lg hidden">
+                    <!-- Hasil filter masuk ke sini -->
+                </div>
             </div>
-            <div>
-                <label class="text-xs font-semibold text-emerald-700 block mb-1">Asal Sekolah</label>
-                <input type="text" id="asal" placeholder="Contoh: SMPN 1 Jakarta" class="w-full border border-emerald-200 rounded-lg p-2 focus:outline-emerald-500">
-            </div>
-            <div>
-                <label class="text-xs font-semibold text-emerald-700 block mb-1">Jurusan yang Dipilih</label>
-                <select id="jurusan" class="w-full border border-emerald-200 rounded-lg p-2 focus:outline-emerald-500 bg-white">
-                    <option value="Akuntansi (AK)">Akuntansi</option>
-                    <option value="Manajemen Perkantoran (MP)">Manajemen Perkantoran</option>
-                    <option value="Bisnis Digital (BD)">Bisnis Digital</option>
-                    <option value="Teknik Komputer & Jaringan (TKJ)">Teknik Komputer & Jaringan</option>
-                </select>
+
+            <!-- Review Data Terpilih -->
+            <div class="bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 text-xs text-gray-600 space-y-1.5">
+                <p><strong>No. Registrasi:</strong> <span id="view-reg" class="text-gray-400">-</span></p>
+                <p><strong>Asal Sekolah:</strong> <span id="view-asal" class="text-gray-400">-</span></p>
+                <p><strong>Pilihan Jurusan:</strong> <span id="view-jurusan" class="text-gray-400">-</span></p>
             </div>
             
-            <button onclick="generateQR()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition mt-2">
-                Buat QR Code
+            <button onclick="generateQR()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition">
+                Generate QR Code
             </button>
         </div>
 
         <!-- Output QR Code -->
-        <div id="qrcode-container" class="mt-6 flex flex-col items-center justify-center hidden">
-            <div id="qrcode" class="p-3 bg-white border border-emerald-200 rounded-xl"></div>
-            <p class="text-xs text-gray-400 mt-2">Silakan foto atau cetak QR ini untuk discan siswa</p>
+        <div id="qrcode-container" class="mt-6 flex flex-col items-center justify-center hidden border-t border-dashed border-emerald-200 pt-4">
+            <div id="qrcode" class="p-3 bg-white border border-emerald-200 rounded-xl shadow-sm"></div>
+            <p id="qr-label" class="text-sm font-bold text-emerald-800 mt-3"></p>
+            <p class="text-[10px] text-gray-400">Silakan SS / Cetak untuk kartu tanda peserta siswa</p>
         </div>
     </div>
 
     <script>
-        function generateQR() {
-            const nama = document.getElementById('nama').value;
-            const asal = document.getElementById('asal').value;
-            const jurusan = document.getElementById('jurusan').value;
+        // DATABASE 306 SISWA MPLS DARI EXCEL
+        const dataSiswaMPLS = [
+            {"reg": 301, "nama": "MUHAMAD.RIZKI RAMADHAN", "asal": "ALBAROKAH", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 8, "nama": "MIFZAL EL SAPUTRA", "asal": "DARUL WASILAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 22, "nama": "MUHAMAD ANDIKA PRATAMA", "asal": "MIFTAHUL HUDA", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 5, "nama": "SALSASABILLA SEPTIANI SAFITRI", "asal": "MTS AL HASANI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 39, "nama": "MUHAMAD KHAERUL UMAM", "asal": "MTS AL HASANI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 46, "nama": "MUHAMMAD FAQIH", "asal": "MTS AL HASANI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 182, "nama": "RIZKY RAMADHAN", "asal": "MTS AL HASANI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 105, "nama": "NENG SITI MARWAH", "asal": "MTS AL- AZIZIYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 40, "nama": "MUHAMAD ABI ASSIDIQ", "asal": "MTS AL-AHSAN", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 150, "nama": "ZAHRA NABILA SALSABILA", "asal": "MTS AL-AHSAN", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 171, "nama": "DIKA ANDREAN", "asal": "MTS AL-AHSAN", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 183, "nama": "MOHAMAD FARHAN SAPUTRA", "asal": "MTS AL-AHSAN", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 298, "nama": "YUDHA GUMELAR", "asal": "MTS AL-AHSAN", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 273, "nama": "ELSA AMELIA", "asal": "MTS AL-ANWAR", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 236, "nama": "ZALFA ZALILA AZ ZAHRA", "asal": "MTS AL-FALAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 26, "nama": "SAALIKAH KHANSA JAZILAH", "asal": "MTS AL-GHAZALI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 28, "nama": "NURAINI", "asal": "MTS AL-GHAZALI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 181, "nama": "MUHAMMAD HAIDAR AR-RASYID", "asal": "MTS AL-GHAZALI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 16, "nama": "AMIRA NUR KHASANAH", "asal": "MTS AL-HUDA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 31, "nama": "ADINDA ZAHRA", "asal": "MTS AL-HUDA", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 43, "nama": "SILVIA AGUSTIN", "asal": "MTS AL-HUDA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 69, "nama": "LIA AMELIA", "asal": "MTS AL-HUDA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 153, "nama": "KEYSHA DWI LESTARI", "asal": "MTS AL-HUDA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 164, "nama": "CITRA AZZAHRA", "asal": "MTS AL-HUDA", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 201, "nama": "ALISA RAMADANI", "asal": "MTS AL-HUDA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 139, "nama": "NENENG REVALINA PUTRI", "asal": "MTS AL-IHSAN CHS", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 11, "nama": "REVA MARLIANA", "asal": "MTS AL-INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 13, "nama": "DEVI FEBRIANTI", "asal": "MTS AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 20, "nama": "SITI HALIMATUSAADAH", "asal": "MTS AL-INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 54, "nama": "RANGGA RAMADHAN", "asal": "MTS AL-INAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 67, "nama": "GHEA ARYANTI", "asal": "MTS AL-INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 72, "nama": "LUNA MAYLA FAZIRA", "asal": "MTS AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 84, "nama": "REVAN MAULANA AZHARI", "asal": "MTS AL-INAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 85, "nama": "MUHAMAD AL-BUKHARI", "asal": "MTS AL-INAYAH", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 86, "nama": "WINDY DWI AGUSTIN", "asal": "MTS AL-INAYAH", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 110, "nama": "MARITZA SYIFA INDRIANI", "asal": "MTS AL-INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 121, "nama": "GAVIN NAZALUL RIZKI", "asal": "MTS AL-INAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 154, "nama": "ELSA RAHMADANI", "asal": "MTS AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 172, "nama": "SASKIA INDAH REZEKI", "asal": "MTS AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 222, "nama": "REVI MARLIANI", "asal": "MTS AL-INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 227, "nama": "FAHRI ANUGRAH", "asal": "MTS AL-INAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 242, "nama": "HILMA NADIFA", "asal": "MTS AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 257, "nama": "ANDIKA RESA", "asal": "MTS AL-INAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 272, "nama": "MUHAMAD REHAN RAMADAN", "asal": "MTS AL-INAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 290, "nama": "BAGAS PRASTIO", "asal": "MTS AL-INAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 125, "nama": "KHAILA AMALIA SAFITRI", "asal": "MTS AL-JAWAMI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 276, "nama": "MUHAMMAD RAIHAN", "asal": "MTS AL-KHAIRIYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 27, "nama": "ROHILAH", "asal": "MTS AL-MA'MUN", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 204, "nama": "AL-FIKRI", "asal": "MTS AL-MAMUN", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 223, "nama": "SITI KHODIJAH", "asal": "MTS AL-MAMUN", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 68, "nama": "SANTI AMELIA", "asal": "MTS AS-SADAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 149, "nama": "ADITYA PUTRA MANDIRI", "asal": "MTS AS-SADAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 289, "nama": "RADIT PRATAMA PUTRA", "asal": "MTS AS-SADAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 141, "nama": "AZMI FAUZIAH", "asal": "MTS AT-TAQWA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 207, "nama": "NURAINI SALSABILA PUTRI", "asal": "MTS AT-TAQWA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 311, "nama": "ZASKIA MEILANI", "asal": "MTS AT-TAQWA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 138, "nama": "RIFA'ATUL MAHMUDAH", "asal": "MTS DAARUL KHOBEER", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 294, "nama": "DEDE NURUL HUDAYA", "asal": "MTS DAARUL KHOBEER", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 300, "nama": "SITI AULIA RAHMAH", "asal": "MTS DAARUL KHOBEER", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 50, "nama": "MOHAMMAD RAFI", "asal": "MTS DARUL AMANAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 208, "nama": "SITI MAESAROH", "asal": "MTS DARUL ULUM", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 158, "nama": "AZZAHRA CHINTYA SALSABILA", "asal": "MTS DARUNNAJAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 218, "nama": "RESTI ALYA SAFITRI", "asal": "MTS JAMIATUL KHAIR", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 266, "nama": "REHAN REVALDI", "asal": "MTS MIFTAHUL FALAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 305, "nama": "SABRINA AMALIA PUTRI", "asal": "MTS MIFTAHUL FALAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 55, "nama": "AZAHRA MEILANI AGUSTIN", "asal": "MTS MIFTAHUL ULUM", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 291, "nama": "ANDIKA SETIAWAN", "asal": "MTS MIFTAHUL ULUM", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 216, "nama": "PUTRI AULIA RAHMADHANI", "asal": "MTS NURUL FALAH PABUARAN", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 169, "nama": "ALFIAN DARMAWAN", "asal": "MTS NURUL HUDA", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 156, "nama": "SITI MARYAM INDAH PRATIWI", "asal": "MTS NURUL ISLAM", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 309, "nama": "AULIA SITI RAHMAWATI", "asal": "MTS NURUL ISLAM", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 269, "nama": "CHIKAL MAULANA IBRAHIM", "asal": "MTS PERSIS 109", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 53, "nama": "EKA AGUSTINA WALUYO", "asal": "MTS S AL-MA'MUN", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 278, "nama": "NURAINUN NADIRA AZZAHRA", "asal": "MTS S AL-MA'MUN", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 174, "nama": "NUR ASYIAH PUTRI", "asal": "MTS SA AR-ROYYAN", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 35, "nama": "RIZKY NUR DIANSYAH", "asal": "MTS SA INTEGRAL AL-MANSUR", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 41, "nama": "MUHAMAD RANGGA RADITYA", "asal": "MTS SA KHAIRUL UMMAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 18, "nama": "ADITYA SAPUTRA", "asal": "MTS TARBIYATUL FALAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 147, "nama": "WILDAN MAULANA", "asal": "MTS TARBIYATUL HIDAYAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 277, "nama": "MOHAMAD RAFI PRATAMA", "asal": "MTS TARBIYATUL HUDA", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 47, "nama": "IKHSAN NURDIN", "asal": "MTS WASILATUL HUDA", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 75, "nama": "TIANA PUTRI MAULIDIA", "asal": "MTS WASILATUL HUDA", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 92, "nama": "RIZKI RAMADHAN", "asal": "MTS WASILATUL HUDA", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 122, "nama": "AULIA SITI LUTFIYAH", "asal": "MTS WASILATUL HUDA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 221, "nama": "MUHAMAD ZULFIKAR AKBAR", "asal": "MTS WASILATUL HUDA", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 256, "nama": "REVAN ARDIANSYAH", "asal": "MTS WASILATUL HUDA", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 235, "nama": "NUGRAHA PRATAMA", "asal": "MTS. AL-JAWAMI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 250, "nama": "KHOIRUNNISA AZZAHRA", "asal": "MTS. TARBIYATUL HUDA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 249, "nama": "AUREL DWI MEILANI", "asal": "MTS.AL INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 2, "nama": "DITA RESTIANI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 12, "nama": "INTAN NURUL AINI", "asal": "SMP AL-GHAZALI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 38, "nama": "RESTI ADELIA", "asal": "SMP AL-GHAZALI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 47, "nama": "RESTI AMELIA PUTRI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 81, "nama": "SILVIA NURHAYATI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 100, "nama": "FITRI SALSABILA", "asal": "SMP AL-GHAZALI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 106, "nama": "NAYLA SAFIRA PUTRI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 120, "nama": "AISYAH APRILLIA NUR'AINI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 133, "nama": "GITA SEVTIANI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 135, "nama": "SITI SYIFA FATIMAH", "asal": "SMP AL-GHAZALI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 159, "nama": "MUHAMAD FAQIH ARDIANSYAH", "asal": "SMP AL-GHAZALI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 166, "nama": "KEYSA DWI FAUZIAH", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 167, "nama": "SASKIA RAHMAWATI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 213, "nama": "DINDA REVALINA", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 234, "nama": "NAZWA APRILLIA PUTRI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 237, "nama": "NUR CAHYA NINGSIH", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 240, "nama": "KAYLA NUR RAMADHANI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 241, "nama": "RISKA LESTARI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 244, "nama": "FANI ANDRIANI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 251, "nama": "ZAKIA NURHALIZA", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 253, "nama": "KEYLA NAZWA AGUSTIN", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 255, "nama": "PUTRI AULIA ANJANI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 268, "nama": "SILVI NOVIYANTI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 283, "nama": "ANDRE FERDIAN", "asal": "SMP AL-GHAZALI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 296, "nama": "DITA MEILANI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 313, "nama": "WULAN SARI PUTRI", "asal": "SMP AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 231, "nama": "DIFA CHALISTA OKTAVIANI", "asal": "SMP DAARUL KHOBEER", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 59, "nama": "WULAN NUR'AINI", "asal": "SMP ISLAM AL-INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 61, "nama": "KEYLA ADISTY PUTRI", "asal": "SMP ISLAM AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 80, "nama": "NAZWA AULIA RAMADHANI", "asal": "SMP ISLAM AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 128, "nama": "NAZILLA SEFTIANI LESTARI", "asal": "SMP ISLAM AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 134, "nama": "NABILA EKA PUTRI", "asal": "SMP ISLAM AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 211, "nama": "SITI AULIA ZAHRA", "asal": "SMP ISLAM AL-INAYAH", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 212, "nama": "RISKA DWI NURAINI", "asal": "SMP ISLAM AL-INAYAH", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 165, "nama": "RANGGA RAHARJA", "asal": "SMP ISLAM LUQMANUL HAKIM", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 140, "nama": "ALFIAN HIDAYATULAH", "asal": "SMP JAMIATUL KHAIR", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 4, "nama": "REVALINA INDAH LESTARI", "asal": "SMP MASTER INDONESIA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 33, "nama": "RIVAL FAUZI", "asal": "SMP MUTIARA INSANI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 143, "nama": "FEBIYANTI SAPUTRI", "asal": "SMP MUTIARA INSANI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 219, "nama": "MUHAMAD AZMI AL-FAUZAN", "asal": "SMP MUTIARA INSANI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 148, "nama": "DIANA NURPADILAH", "asal": "SMP NURUL ISLAM", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 215, "nama": "NURHASANAH", "asal": "SMP NURUL ISLAM", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 118, "nama": "WULANDARI", "asal": "SMP PGRI 1 CIAWI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 312, "nama": "AURA DWI MEILANI", "asal": "SMP PGRI CHS", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 224, "nama": "CHIKO AL-GIBRAN", "asal": "SMP PGRI CISARUA", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 115, "nama": "KAYLA REVA LINA", "asal": "SMP S AL-GHAZALI", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 214, "nama": "ZASKIA MEILANI PUTRI", "asal": "SMP S AL-GHAZALI", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 111, "nama": "REVANZA KHAIRUL AZAM", "asal": "SMP TERPADU AL-ISHLAH", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 101, "nama": "ELSA RESTIANA", "asal": "SMP YAPAL", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 103, "nama": "LUNA LESTARI", "asal": "SMP YAPAL", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 104, "nama": "REVALINA INDRIANI", "asal": "SMP YAPAL", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 126, "nama": "ADITYA SAPUTRA", "asal": "SMP YAPAL", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 136, "nama": "MUHAMAD ADITTIA PINDAKA", "asal": "SMP YAPAL", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 142, "nama": "FADIL MAULANA YUSUP", "asal": "SMP YAPAL", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 220, "nama": "RENDI SAPUTRA", "asal": "SMP YAPAL", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 254, "nama": "PUTRI INDAH LESTARI", "asal": "SMP YAPAL", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 259, "nama": "KAYLA ADITYA PUTRI", "asal": "SMP YAPAL", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 284, "nama": "MUHAMAD RENDI FAUZI", "asal": "SMP YAPAL", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 299, "nama": "MUHAMAD FAUZI AZIZ", "asal": "SMP YAPAL", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 45, "nama": "MUHAMMAD FAQIH", "asal": "SMP.AL HASANI", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 145, "nama": "CINDY AMELIA PUTRI", "asal": "SMPN 1 CISARUA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 178, "nama": "ZAHRA SEFTIANI AULIA", "asal": "SMPN 1 CISARUA", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 14, "nama": "MUHAMMAD RAMDANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 21, "nama": "YUNA NUR'AENI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 23, "nama": "NURAINI AGUSTIN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 44, "nama": "NABILA EKA AGUSTIN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 49, "nama": "DITA MEILANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 51, "nama": "DIANA LESTARI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 52, "nama": "NAZWA MEILANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 57, "nama": "MOHAMAD RAFI SYAHPUTRA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 65, "nama": "TIANA AYU ARDITA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 71, "nama": "DEWI SINTA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 73, "nama": "ZAHRA SALSABILLA PUTRI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 74, "nama": "AMIRA NURZAHRA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 87, "nama": "ZASKIA AGUSTIN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 88, "nama": "RADIT JALALUDIN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 93, "nama": "ZALFA ADITYA ADZKIA PUTRI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 102, "nama": "ZASKIA AGUSTIANI PUTRI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 113, "nama": "KEYSHA AMELIA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 114, "nama": "SITI RACHMAWATI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 119, "nama": "AULIA SAFITRI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 124, "nama": "NUR INTAN AGUSTIANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 130, "nama": "AZ-ZAHRA NUR REVALINA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 144, "nama": "DINDA ADELIA SALSABILA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 155, "nama": "SITI KEYSHA NUR ALIYAH", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 157, "nama": "ZASKIA ADELIA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 173, "nama": "AISYAH NAYLA PUTRI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 176, "nama": "MUHAMAD ALBAR SAPUTRA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 177, "nama": "MOHAMAD RENDY ADITYA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 179, "nama": "MAULA AZZAHRA CHAIRUNNISA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 206, "nama": "NAYLA REVALINA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 217, "nama": "MAUREN MAULIDIA INDAH SAPUTRI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 225, "nama": "MUHAMAD RANGGA REVALDI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 232, "nama": "KEYLA ADELIA PUTRI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 243, "nama": "SITI REFA LINA KHOERUNNISA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 245, "nama": "SALSA MEILANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 246, "nama": "KEYLA AGUSTIANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 248, "nama": "SALWA AULIA ANJANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 260, "nama": "ALISA RAMADHANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 262, "nama": "AISYAH CAHYANI RAMADHANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 264, "nama": "NENENG REVA MARLIANA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 265, "nama": "RIZKI MAULANA ADITYA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 270, "nama": "REVANZA ADITYA PRATAMA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 274, "nama": "AZZAHRA MEILANI AGUSTIN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 285, "nama": "RENDI ARDIANSYAH", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 286, "nama": "RANGGA SAPUTRA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 287, "nama": "RADITYA RAMADHAN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 288, "nama": "MUHAMAD RANGGA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 292, "nama": "ANDIKA RESA SAPUTRA", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 293, "nama": "AL-DIANSYAH", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 302, "nama": "MOHAMAD REVAN ARDIANSYAH", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 304, "nama": "MUHAMMAD RAMDANI", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 306, "nama": "KEYSA DWI FAUZIAH", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 307, "nama": "LUNA AGUSTIN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 308, "nama": "SILVIA AGUSTIN", "asal": "SMPN 1 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 1, "nama": "FITRI ARYANTI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 3, "nama": "PUTRI INDAH LESTARI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 6, "nama": "KEYLA ADELIA PUTRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 7, "nama": "WULAN JUNIAR PUTRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 9, "nama": "AULIA SITI RAHMAWATI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 10, "nama": "NURAINI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 15, "nama": "ALFIAN GIBRAN ARDIANSYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 17, "nama": "MOHAMAD RAFI ADITYA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 19, "nama": "NENENG REVALINA PUTRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 24, "nama": "SITI MARYAM INDAH PRATIWI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 25, "nama": "AURA DWI MEILANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 29, "nama": "REVALINA INDRIANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 30, "nama": "AULIA SITI LUTFIYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 32, "nama": "MUHAMAD ABI ASSIDIQ", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 34, "nama": "NENG SITI MARWAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 36, "nama": "SITI REFA LINA KHOERUNNISA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 37, "nama": "ZASKIA MEILANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 42, "nama": "MUHAMAD KHAERUL UMAM", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 48, "nama": "RIZKY NUR DIANSYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 56, "nama": "SITI KEYSHA NUR ALIYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 58, "nama": "SALSASABILLA SEPTIANI SAFITRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 60, "nama": "ZASKIA MEILANI PUTRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 62, "nama": "ALISA RAMADANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 63, "nama": "DINDA ADELIA SALSABILA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 64, "nama": "LUNA AGUSTIN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 66, "nama": "MUHAMMAD FAQIH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 70, "nama": "SANTI AMELIA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 76, "nama": "DIKA ANDREAN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 77, "nama": "AZ-ZAHRA NUR REVALINA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 78, "nama": "ALISA RAMADHANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 79, "nama": "ZASKIA AGUSTIN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 82, "nama": "KEYSHA DWI LESTARI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 83, "nama": "NURAINI SALSABILA PUTRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 89, "nama": "MUHAMAD RANGGA RADITYA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 90, "nama": "CHIKAL MAULANA IBRAHIM", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 91, "nama": "IKHSAN NURDIN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 94, "nama": "RADIT PRATAMA PUTRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 95, "nama": "MOHAMMAD RAFI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 96, "nama": "DIANA NURPADILAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 97, "nama": "MOHAMAD FARHAN SAPUTRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 98, "nama": "ALFIAN DARMAWAN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 99, "nama": "ADITYA PUTRA MANDIRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 107, "nama": "KEYLA ADELIA PUTRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 108, "nama": "SITI MAESAROH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 109, "nama": "NURHASANAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 112, "nama": "MUHAMAD REHAN RAMADAN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 116, "nama": "MUHAMAD ZULFIKAR AKBAR", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 117, "nama": "ZASKIA AGUSTIANI PUTRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 123, "nama": "MUHAMMAD HAIDAR AR-RASYID", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 127, "nama": "NENENG REVA MARLIANA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 129, "nama": "WINDY DWI AGUSTIN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 131, "nama": "AZZAHRA MEILANI AGUSTIN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 132, "nama": "RIZKI RAMADHAN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 137, "nama": "RIZKI MAULANA ADITYA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 146, "nama": "MOHAMAD RENDY ADITYA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 151, "nama": "RENDI ARDIANSYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 152, "nama": "MUHAMAD ALBAR SAPUTRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 160, "nama": "RADITYA RAMADHAN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 161, "nama": "ANDIKA RESA SAPUTRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 162, "nama": "MUHAMAD RANGGA REVALDI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 163, "nama": "REVAN ARDIANSYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 168, "nama": "MOHAMAD REVAN ARDIANSYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 170, "nama": "MUHAMMAD RAMDANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 175, "nama": "MIFZAL EL SAPUTRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 180, "nama": "REVANZA ADITYA PRATAMA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 202, "nama": "ANDIKA SETIAWAN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 203, "nama": "RANGGA SAPUTRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 205, "nama": "MUHAMAD RANGGA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 209, "nama": "AL-DIANSYAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 210, "nama": "YUDHA GUMELAR", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 226, "nama": "AMIRA NUR KHASANAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 228, "nama": "SILVIA AGUSTIN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 229, "nama": "SASKIA INDAH REZEKI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 230, "nama": "LIA AMELIA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 233, "nama": "GHEA ARYANTI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 238, "nama": "LUNA MAYLA FAZIRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 239, "nama": "REVA MARLIANA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 247, "nama": "SITI HALIMATUSAADAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 252, "nama": "REVI MARLIANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 258, "nama": "DEVI FEBRIANTI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 261, "nama": "MARITZA SYIFA INDRIANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 263, "nama": "ADINDA ZAHRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 267, "nama": "CITRA AZZAHRA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "AKUNTANSI KEUANGAN LEMBAGA"},
+            {"reg": 271, "nama": "ELSA RAHMADANI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 275, "nama": "HILMA NADIFA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 279, "nama": "MUHAMAD AL-BUKHARI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 280, "nama": "RANGGA RAMADHAN", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 281, "nama": "REVAN MAULANA AZHARI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 282, "nama": "GAVIN NAZALUL RIZKI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 295, "nama": "FAHRI ANUGRAH", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 297, "nama": "ANDIKA RESA", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 303, "nama": "BAGAS PRASTIO", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "TEKNIK KOMPUTER DAN JARINGAN"},
+            {"reg": 310, "nama": "KHAILA AMALIA SAFITRI", "asal": "SMPN 2 MEGAMENDUNG", "jurusan": "MANAJEMEN PERKANTORAN"},
+            {"reg": 14, "nama": "MUHAMAD RIZKI RAMADHAN", "asal": "SMPN 3 MEGAMENDUNG", "jurusan": "BISNIS DIGITAL"},
+            {"reg": 13, "nama": "MUHAMAD ANDIKA PRATAMA", "asal": "SMPN 4 MEGAMENDUNG", "jurusan": "BISNIS DIGITAL"}
+        ];
 
-            if(!nama || !asal) {
-                alert("Harap isi nama dan asal sekolah!");
+        let selectedStudent = null;
+
+        // Fungsi filter mencari nama
+        function filterSiswa() {
+            const input = document.getElementById('search-input').value.toUpperCase();
+            const listContainer = document.getElementById('autocomplete-list');
+            listContainer.innerHTML = '';
+
+            if (!input) {
+                listContainer.classList.add('hidden');
                 return;
             }
 
-            // Gabungkan data menjadi format objek JSON string
-            const dataSiswa = JSON.stringify({
-                nama: nama,
-                asal: asal,
-                jurusan: jurusan
+            const filtered = dataSiswaMPLS.filter(siswa => siswa.nama.includes(input));
+
+            if (filtered.length > 0) {
+                listContainer.classList.remove('hidden');
+                filtered.forEach(siswa => {
+                    const item = document.createElement('div');
+                    item.className = "p-2.5 hover:bg-emerald-50 cursor-pointer border-b border-gray-50 text-sm font-medium text-gray-700";
+                    item.innerText = `${siswa.nama} (${siswa.asal})`;
+                    item.onclick = () => pilihSiswa(siswa);
+                    listContainer.appendChild(item);
+                });
+            } else {
+                listContainer.classList.remove('hidden');
+                const noResult = document.createElement('div');
+                noResult.className = "p-2.5 text-gray-400 text-sm italic";
+                noResult.innerText = "Nama tidak ditemukan";
+                listContainer.appendChild(noResult);
+            }
+        }
+
+        // Fungsi saat nama siswa dipilih dari dropdown
+        function pilihSiswa(siswa) {
+            selectedStudent = siswa;
+            document.getElementById('search-input').value = siswa.nama;
+            document.getElementById('autocomplete-list').classList.add('hidden');
+
+            // Update Review Tampilan
+            document.getElementById('view-reg').innerText = siswa.reg;
+            document.getElementById('view-asal').innerText = siswa.asal;
+            document.getElementById('view-jurusan').innerText = siswa.jurusan;
+        }
+
+        // Fungsi membuat QR Code
+        function generateQR() {
+            if (!selectedStudent) {
+                alert("Silakan cari dan pilih nama siswa terlebih dahulu!");
+                return;
+            }
+
+            const container = document.getElementById("qrcode-container");
+            const qrDiv = document.getElementById("qrcode");
+            const label = document.getElementById("qr-label");
+
+            qrDiv.innerHTML = "";
+            container.classList.remove("hidden");
+
+            // Format data diubah ke JSON string untuk dibaca oleh scanner index.html
+            const dataString = JSON.stringify({
+                nama: selectedStudent.nama,
+                asal: selectedStudent.asal,
+                jurusan: selectedStudent.jurusan
             });
 
-            // Reset QR code sebelumnya jika ada
-            document.getElementById("qrcode").innerHTML = "";
-            document.getElementById("qrcode-container").classList.remove("hidden");
-
-            // Membuat QR Code baru
-            new QRCode(document.getElementById("qrcode"), {
-                text: dataSiswa,
-                width: 180,
-                height: 180,
-                colorDark : "#065f46", // Warna hijau gelap untuk QR agar mudah discan
+            new QRCode(qrDiv, {
+                text: dataString,
+                width: 200,
+                height: 200,
+                colorDark : "#047857",
                 colorLight : "#ffffff"
             });
+
+            label.innerText = selectedStudent.nama;
         }
+
+        // Menutup dropdown jika klik di luar area input
+        document.addEventListener('click', function(e) {
+            if (e.target.id !== 'search-input') {
+                document.getElementById('autocomplete-list').classList.add('hidden');
+            }
+        });
     </script>
 </body>
 </html>
