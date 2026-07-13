@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator QR Code MPLS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Library Pembuat QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-emerald-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-6 rounded-2xl shadow-lg border border-emerald-100 max-w-md w-full">
+        <h2 class="text-xl font-bold text-emerald-800 mb-4 text-center">Buat QR Code Peserta MPLS</h2>
+        
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs font-semibold text-emerald-700 block mb-1">Nama Siswa</label>
+                <input type="text" id="nama" placeholder="Contoh: Ahmad Fauzi" class="w-full border border-emerald-200 rounded-lg p-2 focus:outline-emerald-500">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-emerald-700 block mb-1">Asal Sekolah</label>
+                <input type="text" id="asal" placeholder="Contoh: SMPN 1 Jakarta" class="w-full border border-emerald-200 rounded-lg p-2 focus:outline-emerald-500">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-emerald-700 block mb-1">Jurusan yang Dipilih</label>
+                <select id="jurusan" class="w-full border border-emerald-200 rounded-lg p-2 focus:outline-emerald-500 bg-white">
+                    <option value="Akuntansi (AK)">Akuntansi</option>
+                    <option value="Manajemen Perkantoran (MP)">Manajemen Perkantoran</option>
+                    <option value="Bisnis Digital (BD)">Bisnis Digital</option>
+                    <option value="Teknik Komputer & Jaringan (TKJ)">Teknik Komputer & Jaringan</option>
+                </select>
+            </div>
+            
+            <button onclick="generateQR()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition mt-2">
+                Buat QR Code
+            </button>
+        </div>
+
+        <!-- Output QR Code -->
+        <div id="qrcode-container" class="mt-6 flex flex-col items-center justify-center hidden">
+            <div id="qrcode" class="p-3 bg-white border border-emerald-200 rounded-xl"></div>
+            <p class="text-xs text-gray-400 mt-2">Silakan foto atau cetak QR ini untuk discan siswa</p>
+        </div>
+    </div>
+
+    <script>
+        function generateQR() {
+            const nama = document.getElementById('nama').value;
+            const asal = document.getElementById('asal').value;
+            const jurusan = document.getElementById('jurusan').value;
+
+            if(!nama || !asal) {
+                alert("Harap isi nama dan asal sekolah!");
+                return;
+            }
+
+            // Gabungkan data menjadi format objek JSON string
+            const dataSiswa = JSON.stringify({
+                nama: nama,
+                asal: asal,
+                jurusan: jurusan
+            });
+
+            // Reset QR code sebelumnya jika ada
+            document.getElementById("qrcode").innerHTML = "";
+            document.getElementById("qrcode-container").classList.remove("hidden");
+
+            // Membuat QR Code baru
+            new QRCode(document.getElementById("qrcode"), {
+                text: dataSiswa,
+                width: 180,
+                height: 180,
+                colorDark : "#065f46", // Warna hijau gelap untuk QR agar mudah discan
+                colorLight : "#ffffff"
+            });
+        }
+    </script>
+</body>
+</html>
