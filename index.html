@@ -3,116 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi MPLS - SMK BM Al Ikhlas</title>
-    <!-- Tailwind CSS untuk tema Hijau & Putih -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Library QR Code Scanner -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- Animate.css untuk Animasi Keren -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <title>Sistem Absensi Otomatis MPLS 2026</title>
+    <!-- Memanggil Library QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        .bg-custom-green { background-color: #22c55e; }
-        .text-custom-green { color: #22c55e; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #d1e2d3;
+            color: #1b4d3e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 450px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            color: #1b4d3e;
+        }
+        h3 {
+            font-size: 16px;
+            font-weight: normal;
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: #4a7c6c;
+        }
+        /* Style untuk kotak scanner */
+        #reader {
+            width: 100%;
+            border: 2px solid #1b4d3e !important;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+        /* Merapikan tombol dan pilihan kamera bawaan library */
+        #reader button {
+            background-color: #1b4d3e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: 0.3s;
+        }
+        #reader button:hover {
+            background-color: #2c6b57;
+        }
+        #reader select {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            width: 80%;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
     </style>
 </head>
-<body class="bg-emerald-50 font-sans min-h-screen flex flex-col items-center justify-between p-4">
+<body>
 
-    <!-- ANIMASI SELAMAT DATANG -->
-    <header class="text-center my-6 animate__animated animate__fadeInDown">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-emerald-700 tracking-wide drop-shadow-sm">
-            Selamat Datang di SMK BM Al Ikhlas
-        </h1>
-        <p class="text-emerald-600 mt-2 font-medium">Sistem Absensi Otomatis MPLS 2026</p>
-    </header>
-
-    <!-- AREA UTAMA -->
-    <main class="w-full max-w-md bg-white rounded-3xl shadow-xl p-6 border border-emerald-100 flex-grow flex flex-col justify-between">
+    <div class="container">
+        <h1>Selamat Datang di SMK BM Al Ikhlas</h1>
+        <h3>Sistem Absensi Otomatis MPLS 2026</h3>
         
-        <!-- Scanner Camera Area -->
-        <div class="relative rounded-2xl overflow-hidden border-4 border-emerald-400 bg-black aspect-square mb-4">
-            <div id="reader" class="w-full h-full"></div>
-            <div class="absolute inset-0 border-2 border-dashed border-white pointer-events-none opacity-50 m-12 rounded-lg animate-pulse"></div>
-        </div>
+        <!-- Kotak Kamera Tempat Scan -->
+        <div id="reader"></div>
+        
+        <!-- Kotak Notifikasi Hasil Scan -->
+        <div id="result"></div>
+    </div>
 
-        <!-- POPUP / POP-OVER ANIMASI SUKSES & TERCATAT -->
-        <div id="result-box" class="hidden text-center p-4 rounded-2xl border-2 bg-emerald-100 border-emerald-400 animate__animated">
-            <div id="success-icon" class="text-4xl mb-2">✅</div>
-            <h2 id="status-text" class="text-xl font-bold text-emerald-800 mb-3">Berhasil Tercatat!</h2>
-            
-            <!-- Data Siswa -->
-            <div class="bg-white p-4 rounded-xl text-left shadow-inner space-y-2 text-sm text-gray-700">
-                <p><strong>No. Antrian:</strong> <span id="res-antrian" class="text-emerald-600 font-bold text-base"></span></p>
-                <p><strong>Nama:</strong> <span id="res-nama" class="font-semibold"></span></p>
-                <p><strong>Asal Sekolah:</strong> <span id="res-asal"></span></p>
-                <p><strong>Jurusan:</strong> <span id="res-jurusan" class="badge bg-emerald-500 text-white px-2 py-0.5 rounded text-xs"></span></p>
-            </div>
-        </div>
-
-        <p class="text-center text-xs text-gray-400 mt-4">Arahkan QR Code siswa ke kamera</p>
-    </main>
-
-    <!-- Footer -->
-    <footer class="text-center text-emerald-700 text-xs mt-6 opacity-75">
-        &copy; 2026 SMK BM Al Ikhlas. All Rights Reserved.
-    </footer>
-
-    <!-- LOGIKAL SCANNER -->
     <script>
-        let isProcessing = false;
-        let antrianCounter = 1;
-
         function onScanSuccess(decodedText, decodedResult) {
-            if (isProcessing) return; // Mencegah scan ganda dalam waktu bersamaan
-            isProcessing = true;
+            // Suara bip singkat saat berhasil scan (opsional)
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+            audio.play();
 
-            try {
-                // Berharap format QR berupa JSON: {"nama":"Budi","asal":"SMP 1","jurusan":"Akuntansi"}
-                const dataSiswa = JSON.parse(decodedText);
-                
-                // Mainkan Animasi Sukses & Tercatat
-                tampilkanData(dataSiswa);
-            } catch (e) {
-                // Jika QR Code bukan JSON, masukkan text biasa ke Nama
-                tampilkanData({
-                    nama: decodedText,
-                    asal: "Tidak Diketahui",
-                    jurusan: "Umum"
-                });
-            }
-        }
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = "result success";
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `✅ Absen Berhasil!<br>Data: ${decodedText}`;
 
-        function tampilkanData(data) {
-            const resultBox = document.getElementById('result-box');
+            // Kirim data absensi ke sistem/console kamu di sini
+            console.log(`Scan result: ${decodedText}`, decodedResult);
             
-            // Set Data ke Layar
-            document.getElementById('res-antrian').innerText = `#${String(antrianCounter).padStart(3, '0')}`;
-            document.getElementById('res-nama').innerText = data.nama;
-            document.getElementById('res-asal').innerText = data.asal;
-            document.getElementById('res-jurusan').innerText = data.jurusan;
-
-            // Reset Animasi Class
-            resultBox.classList.remove('hidden', 'animate__bounceIn', 'animate__fadeOut');
-            // Efek Animasi Sukses Muncul (Bounce In)
-            resultBox.classList.add('animate__bounceIn');
-
-            // Naikkan antrian
-            antrianCounter++;
-
-            // Setelah 5 detik, hilangkan data (Animasi Keluar) dan siap scan lagi
+            // Sembunyikan notifikasi setelah 3 detik
             setTimeout(() => {
-                resultBox.classList.remove('animate__bounceIn');
-                resultBox.classList.add('animate__fadeOut');
-                
-                setTimeout(() => {
-                    resultBox.classList.add('hidden');
-                    isProcessing = false; // Membuka kunci scanner kembali
-                }, 500);
-            }, 5000);
+                resultDiv.style.display = "none";
+            }, 3000);
         }
 
-        // Menjalankan Kamera Scanner
-        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render(onScanSuccess);
+        function onScanFailure(error) {
+            // Dikosongkan agar tidak memenuhi log saat kamera mencari QR
+        }
+
+        // Konfigurasi Scanner
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                rememberLastUsedCamera: true,
+                // Mengatur prioritas utama ke kamera belakang (environment)
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            }
+        );
+
+        // Menjalankan Scanner
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+        // Tambahan otomatis untuk performa browser HP agar tidak memblokir video
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const videoElement = document.querySelector('#reader video');
+                if (videoElement) {
+                    videoElement.setAttribute('playsinline', 'true');
+                    videoElement.setAttribute('muted', 'true');
+                    videoElement.play().catch(err => console.log("Auto-play blocked atau kamera belum aktif"));
+                }
+            }, 2000);
+        });
     </script>
 </body>
 </html>
